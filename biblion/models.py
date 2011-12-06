@@ -22,6 +22,9 @@ from biblion.utils import can_tweet
 
 
 class Biblion(models.Model):
+    """
+    A blog, which may be published across multiple sites.
+    """
     
     title = models.CharField(max_length=128)
     subtitle = models.CharField(max_length=256, null=True, blank=True)
@@ -45,6 +48,12 @@ class BiblionContributor(models.Model):
 
 
 class Post(models.Model):
+    """
+    A blog post, which can be associated with multiple sites.
+    
+    It can also be tweeted and published at a future date.  Contributors
+    may also make revisions to the post.
+    """
     
     biblion = models.ForeignKey(Biblion, related_name="posts")
     sites = models.ManyToManyField(Site)
@@ -88,6 +97,14 @@ class Post(models.Model):
         return self.title
     
     def as_tweet(self):
+        """
+        Returns the post's designated tweet text, generating it if necessary.
+
+        If a post does yet have tweet text generated, generate a shortened
+        URL, and append to a string with the TWITTER_TWEET_PREFIX and post 
+        title.
+        """
+        
         if not self.tweet_text:
             current_site = Site.objects.get_current()
             api_url = "http://api.tr.im/api/trim_url.json"
@@ -105,6 +122,10 @@ class Post(models.Model):
         return self.tweet_text
     
     def tweet(self):
+        """
+        Send the post's tweet text to the twitter API.
+        """
+        
         if can_tweet():
             account = twitter.Api(
                 username = settings.TWITTER_USERNAME,
@@ -140,12 +161,19 @@ class Post(models.Model):
         return reverse("biblion_post_detail", kwargs={"slug": self.slug})
     
     def inc_views(self):
+        """
+        Increment view count for this post and it's current revision.
+        """
+        
         self.view_count += 1
         self.save()
         self.current().inc_views()
 
 
 class Revision(models.Model):
+    """
+    A revision for a blog post.
+    """
     
     post = models.ForeignKey(Post, related_name="revisions")
     
